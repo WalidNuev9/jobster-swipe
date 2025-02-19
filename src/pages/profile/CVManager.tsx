@@ -3,19 +3,50 @@ import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Upload, FileText, ArrowLeft } from "lucide-react";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Link } from "react-router-dom";
 
 const CVManager = () => {
   const [isUploading, setIsUploading] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const { toast } = useToast();
+
+  const analyzeCV = async (fileUrl: string) => {
+    setIsAnalyzing(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Non authentifié");
+
+      const { data, error } = await supabase.functions.invoke('analyze-cv', {
+        body: { fileUrl }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Analyse terminée",
+        description: "Votre CV a été analysé avec succès"
+      });
+
+      console.log('Résultat de l\'analyse:', data.analysis);
+      return data.analysis;
+    } catch (error) {
+      console.error('Erreur lors de l\'analyse:', error);
+      toast({
+        variant: "destructive",
+        title: "Erreur lors de l'analyse",
+        description: "Une erreur est survenue lors de l'analyse de votre CV"
+      });
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // Vérifier que c'est bien un PDF
     if (file.type !== "application/pdf") {
       toast({
         variant: "destructive",
@@ -33,19 +64,16 @@ const CVManager = () => {
       const userId = user.data.user.id;
       const filePath = `${userId}/${file.name}`;
 
-      // Upload du fichier
       const { error: uploadError } = await supabase.storage
         .from("cvs")
         .upload(filePath, file);
 
       if (uploadError) throw uploadError;
 
-      // Récupérer l'URL du fichier
       const { data: { publicUrl } } = supabase.storage
         .from("cvs")
         .getPublicUrl(filePath);
 
-      // Enregistrer les informations dans la base de données
       const { error: dbError } = await supabase
         .from("cvs")
         .insert({
@@ -58,8 +86,12 @@ const CVManager = () => {
 
       toast({
         title: "CV téléchargé avec succès",
-        description: "Votre CV a été enregistré"
+        description: "Analyse du CV en cours..."
       });
+
+      // Lancer l'analyse du CV
+      await analyzeCV(publicUrl);
+
     } catch (error) {
       console.error("Erreur lors du téléchargement:", error);
       toast({
@@ -96,11 +128,13 @@ const CVManager = () => {
           
           <div className="flex justify-center">
             <Button 
-              disabled={isUploading}
+              disabled={isUploading || isAnalyzing}
               onClick={() => document.getElementById("cv-upload")?.click()}
             >
               <Upload className="mr-2 h-4 w-4" />
-              {isUploading ? "Téléchargement..." : "Sélectionner un fichier"}
+              {isUploading ? "Téléchargement..." : 
+               isAnalyzing ? "Analyse en cours..." : 
+               "Sélectionner un fichier"}
             </Button>
             <input
               id="cv-upload"
