@@ -1,15 +1,23 @@
 
 import { useState } from "react";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Upload, FileText, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Link } from "react-router-dom";
 
+interface CVAnalysis {
+  formation?: string[];
+  experience_professionnelle?: string[];
+  competences_techniques?: string[];
+  langues?: string[];
+}
+
 const CVManager = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisResult, setAnalysisResult] = useState<CVAnalysis | null>(null);
   const { toast } = useToast();
 
   const analyzeCV = async (fileUrl: string) => {
@@ -24,13 +32,15 @@ const CVManager = () => {
 
       if (error) throw error;
 
+      const parsedAnalysis = JSON.parse(data.analysis);
+      setAnalysisResult(parsedAnalysis);
+
       toast({
         title: "Analyse terminée",
         description: "Votre CV a été analysé avec succès"
       });
 
-      console.log('Résultat de l\'analyse:', data.analysis);
-      return data.analysis;
+      return parsedAnalysis;
     } catch (error) {
       console.error('Erreur lors de l\'analyse:', error);
       toast({
@@ -89,7 +99,6 @@ const CVManager = () => {
         description: "Analyse du CV en cours..."
       });
 
-      // Lancer l'analyse du CV
       await analyzeCV(publicUrl);
 
     } catch (error) {
@@ -102,6 +111,21 @@ const CVManager = () => {
     } finally {
       setIsUploading(false);
     }
+  };
+
+  const renderAnalysisSection = (title: string, items?: string[]) => {
+    if (!items || items.length === 0) return null;
+    
+    return (
+      <div className="mb-6">
+        <h3 className="text-lg font-semibold mb-2">{title}</h3>
+        <ul className="list-disc list-inside space-y-1">
+          {items.map((item, index) => (
+            <li key={index} className="text-gray-600">{item}</li>
+          ))}
+        </ul>
+      </div>
+    );
   };
 
   return (
@@ -147,10 +171,22 @@ const CVManager = () => {
         </div>
       </Card>
 
+      {analysisResult && (
+        <Card className="mt-8">
+          <CardContent className="p-6">
+            <h2 className="text-2xl font-bold mb-6">Analyse du CV</h2>
+            
+            {renderAnalysisSection("Formation", analysisResult.formation)}
+            {renderAnalysisSection("Expérience Professionnelle", analysisResult.experience_professionnelle)}
+            {renderAnalysisSection("Compétences Techniques", analysisResult.competences_techniques)}
+            {renderAnalysisSection("Langues", analysisResult.langues)}
+          </CardContent>
+        </Card>
+      )}
+
       <Card className="mt-8 p-6">
         <h2 className="text-xl font-semibold mb-4">CVs téléchargés</h2>
         <div className="space-y-4">
-          {/* Cette section sera implémentée pour afficher les CVs existants */}
           <p className="text-gray-600 text-center py-4">
             La liste de vos CVs téléchargés apparaîtra ici
           </p>
