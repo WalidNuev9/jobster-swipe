@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Upload, FilePdf, ArrowLeft } from "lucide-react";
+import { Upload, FileText, ArrowLeft } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Link } from "react-router-dom";
@@ -87,7 +87,7 @@ const CVManager = () => {
       <Card className="p-6">
         <div className="text-center space-y-6">
           <div className="flex flex-col items-center">
-            <FilePdf className="h-16 w-16 text-gray-400 mb-4" />
+            <FileText className="h-16 w-16 text-gray-400 mb-4" />
             <h2 className="text-xl font-semibold mb-2">Télécharger votre CV</h2>
             <p className="text-gray-600 mb-4">
               Téléchargez votre CV au format PDF pour le partager avec les recruteurs
