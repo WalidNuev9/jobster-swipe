@@ -44,6 +44,51 @@ export type Database = {
           },
         ]
       }
+      job_offers: {
+        Row: {
+          company: string
+          contract_type: string
+          created_at: string
+          description: string
+          id: string
+          location: string
+          recruiter_id: string
+          requirements: string | null
+          salary_range: string | null
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          company: string
+          contract_type: string
+          created_at?: string
+          description: string
+          id?: string
+          location: string
+          recruiter_id: string
+          requirements?: string | null
+          salary_range?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          company?: string
+          contract_type?: string
+          created_at?: string
+          description?: string
+          id?: string
+          location?: string
+          recruiter_id?: string
+          requirements?: string | null
+          salary_range?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
