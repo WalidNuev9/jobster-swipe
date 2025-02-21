@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
+import { supabase } from "@/integrations/supabase/client";
 
 const SignUp = () => {
   const [email, setEmail] = useState("");
@@ -18,7 +19,7 @@ const SignUp = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (password !== confirmPassword) {
@@ -39,14 +40,44 @@ const SignUp = () => {
       return;
     }
 
-    // Pour l'instant, simulons une inscription réussie
-    toast({
-      title: "Inscription réussie",
-      description: "Votre compte a été créé avec succès",
-    });
+    try {
+      // Créer l'utilisateur
+      const { data: { user }, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+      });
 
-    // Redirection vers la page de connexion
-    navigate("/login");
+      if (signUpError) throw signUpError;
+
+      if (user) {
+        // Ajouter le rôle de l'utilisateur
+        const { error: roleError } = await supabase
+          .from('user_roles')
+          .insert([
+            {
+              user_id: user.id,
+              role: userType,
+            }
+          ]);
+
+        if (roleError) throw roleError;
+
+        toast({
+          title: "Inscription réussie",
+          description: "Votre compte a été créé avec succès",
+        });
+
+        // Redirection vers la page appropriée selon le rôle
+        navigate(`/dashboard/${userType}`);
+      }
+    } catch (error) {
+      console.error('Erreur lors de l\'inscription:', error);
+      toast({
+        variant: "destructive",
+        title: "Erreur",
+        description: "Une erreur est survenue lors de l'inscription",
+      });
+    }
   };
 
   return (

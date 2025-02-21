@@ -6,29 +6,52 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { supabase } from "@/integrations/supabase/client";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [userType, setUserType] = useState("job-seeker");
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Pour l'instant, simulons une connexion réussie
-    toast({
-      title: "Connexion réussie",
-      description: "Bienvenue sur votre tableau de bord",
-    });
+    try {
+      const { data: { user }, error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
 
-    // Redirection vers le tableau de bord approprié
-    if (userType === "job-seeker") {
-      navigate("/dashboard/job-seeker");
-    } else {
-      navigate("/dashboard/recruiter");
+      if (signInError) throw signInError;
+
+      if (user) {
+        // Récupérer le rôle de l'utilisateur
+        const { data: roleData } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', user.id)
+          .single();
+
+        toast({
+          title: "Connexion réussie",
+          description: "Bienvenue sur votre tableau de bord",
+        });
+
+        // Rediriger vers le tableau de bord approprié
+        if (roleData?.role) {
+          navigate(`/dashboard/${roleData.role}`);
+        } else {
+          navigate('/'); // Redirection par défaut si aucun rôle n'est trouvé
+        }
+      }
+    } catch (error) {
+      console.error('Erreur lors de la connexion:', error);
+      toast({
+        variant: "destructive",
+        title: "Erreur",
+        description: "Email ou mot de passe incorrect",
+      });
     }
   };
 
@@ -44,24 +67,6 @@ const Login = () => {
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-4">
-            <div>
-              <Label htmlFor="userType">Type de compte</Label>
-              <RadioGroup
-                value={userType}
-                onValueChange={setUserType}
-                className="flex gap-4 mt-2"
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="job-seeker" id="job-seeker" />
-                  <Label htmlFor="job-seeker">Chercheur d'emploi</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="recruiter" id="recruiter" />
-                  <Label htmlFor="recruiter">Recruteur</Label>
-                </div>
-              </RadioGroup>
-            </div>
-
             <div>
               <Label htmlFor="email">Email</Label>
               <Input
