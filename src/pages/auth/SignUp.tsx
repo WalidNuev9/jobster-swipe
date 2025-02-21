@@ -10,11 +10,14 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 
+// Définir le type strict pour les rôles
+type UserRole = "admin" | "recruiter" | "job-seeker";
+
 const SignUp = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [userType, setUserType] = useState("job-seeker");
+  const [userType, setUserType] = useState<UserRole>("job-seeker");
   const [acceptTerms, setAcceptTerms] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -50,15 +53,13 @@ const SignUp = () => {
       if (signUpError) throw signUpError;
 
       if (user) {
-        // Ajouter le rôle de l'utilisateur
+        // Ajouter le rôle de l'utilisateur avec le type correct
         const { error: roleError } = await supabase
           .from('user_roles')
-          .insert([
-            {
-              user_id: user.id,
-              role: userType,
-            }
-          ]);
+          .insert({
+            user_id: user.id,
+            role: userType // userType est maintenant correctement typé comme UserRole
+          });
 
         if (roleError) throw roleError;
 
@@ -96,7 +97,7 @@ const SignUp = () => {
               <Label htmlFor="userType">Type de compte</Label>
               <RadioGroup
                 value={userType}
-                onValueChange={setUserType}
+                onValueChange={(value: UserRole) => setUserType(value)}
                 className="flex gap-4 mt-2"
               >
                 <div className="flex items-center space-x-2">
