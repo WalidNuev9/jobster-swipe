@@ -11,27 +11,61 @@ import { supabase } from "@/integrations/supabase/client";
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsLoading(true);
     
     try {
-      const { data: { user }, error: signInError } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password
       });
 
-      if (signInError) throw signInError;
+      if (error) {
+        // Gestion des différents types d'erreurs
+        if (error.message.includes("Invalid login credentials")) {
+          toast({
+            variant: "destructive",
+            title: "Erreur de connexion",
+            description: "Email ou mot de passe incorrect",
+          });
+        } else if (error.message.includes("Email not confirmed")) {
+          toast({
+            variant: "destructive",
+            title: "Email non confirmé",
+            description: "Veuillez vérifier votre boîte mail et confirmer votre email",
+          });
+        } else {
+          toast({
+            variant: "destructive",
+            title: "Erreur",
+            description: "Une erreur est survenue lors de la connexion",
+          });
+        }
+        return;
+      }
 
-      if (user) {
+      if (data.user) {
         // Récupérer le rôle de l'utilisateur
-        const { data: roleData } = await supabase
+        const { data: roleData, error: roleError } = await supabase
           .from('user_roles')
           .select('role')
-          .eq('user_id', user.id)
+          .eq('user_id', data.user.id)
           .single();
+
+        if (roleError) {
+          console.error('Erreur lors de la récupération du rôle:', roleError);
+          toast({
+            variant: "destructive",
+            title: "Erreur",
+            description: "Impossible de récupérer votre rôle",
+          });
+          return;
+        }
 
         toast({
           title: "Connexion réussie",
@@ -50,8 +84,10 @@ const Login = () => {
       toast({
         variant: "destructive",
         title: "Erreur",
-        description: "Email ou mot de passe incorrect",
+        description: "Une erreur inattendue est survenue",
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -76,6 +112,8 @@ const Login = () => {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 className="mt-1"
+                disabled={isLoading}
+                placeholder="votre@email.com"
               />
             </div>
 
@@ -88,12 +126,14 @@ const Login = () => {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 className="mt-1"
+                disabled={isLoading}
+                placeholder="Votre mot de passe"
               />
             </div>
           </div>
 
-          <Button type="submit" className="w-full">
-            Se connecter
+          <Button type="submit" className="w-full" disabled={isLoading}>
+            {isLoading ? "Connexion en cours..." : "Se connecter"}
           </Button>
         </form>
 
